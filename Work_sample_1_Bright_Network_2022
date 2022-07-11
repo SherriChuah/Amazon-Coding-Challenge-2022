@@ -1,0 +1,211 @@
+from queue import Queue
+
+# create a grid of size (sizexsize)
+def preset(size, start, end, block) -> list(list()):
+	'''
+		Arguments:
+			size : size of square tile
+			start : tuple coordinate for starting point
+			end : tuple coordinate for end point
+			block : list of tuples that cannot be reached
+		Return:
+			2d array
+	'''
+	# create a size by size block
+	grid = []
+	for i in range(size):
+		lst = []
+		for j in range(size):
+			lst.append([0,None,None]) # identity, number of moves, parent
+		grid.append(lst)
+		lst = []
+
+	# add blockage to grid
+	try:
+		for b in block:
+			grid[b[0]][b[1]][0] = 'block'
+			grid[b[0]][b[1]][1] = -1 # blocked values should not have any distance value
+
+	except:
+		exit('Not a valid coordinate')
+
+	# set the start coordinate to 0 for the estimate
+	if start[0] == end[0] and start[1] == end[1]:
+		exit('Start and exit are the same spot')
+
+	elif not within_range(start, size):
+		exit('Start not within range')
+
+	elif not within_range(end, size):
+		exit('End not within range')
+
+	else:
+		grid[start[0]][start[1]][0] = 'start'
+		grid[start[0]][start[1]][1] = 1
+		grid[start[0]][start[1]][2] = start
+
+
+		grid[end[0]][end[1]][0] = 'end'
+
+	return grid
+
+
+def print_grid(grid, route):
+	'''
+		Arguments:
+			grid : 2d array
+			route : list of tuples consisting of the path, can be empty
+
+	'''
+	coord = -1
+	
+	for r in grid:
+		coord += 1
+		coord1 = -1
+		for c in r:
+			coord1 += 1
+			#print(coord, coord1)
+			if c[0] == 'start':
+				print('S ', end='')
+			elif c[0] == 'end':
+				print('E ', end='')
+			elif c[0] == 'block':
+				print('# ', end='')
+			elif (coord, coord1) in route:
+				print('x ', end='')
+			else:
+				print('. ', end='')
+		print()
+
+
+def within_range(coords, size) -> bool:
+	'''
+		Arguments:
+			coords : tuple coordinate (N, M)
+			size : int representing size of grid (2d array)
+		Return:
+			bool
+	'''
+	if coords[0] < 0 or coords[0] > size -1 or coords[1] < 0 or coords[1] > size-1:
+		return False
+	else:
+		return True
+
+
+def find_valid_children(coords, grid) -> list(tuple()):
+	'''
+		Arguments:
+			coords : tuple coordinate (N, M)
+			grid : 2d array
+		Return:
+			list of tuples
+	'''
+	lst = []
+
+	for d in direction:
+		new_coord = (coords[0] + direction[d][0], coords[1] + direction[d][1])
+
+		# check if new_coords is valid
+		if not within_range(new_coord, size):
+			continue
+
+		elif grid[new_coord[0]][new_coord[1]][0] == 'block':
+			continue
+
+		else:
+			lst.append(new_coord)
+
+	return lst
+	
+def solve(start, end, grid) -> list(list()):
+	'''
+		Arguments:
+			coords : tuple coordinate (N, M)
+			grid : 2d array
+		Return:
+			2D array
+	'''
+	queue = Queue()
+	queue.put(start)
+
+	while not queue.empty():
+		curr = queue.get()	
+
+		valid = find_valid_children(curr, grid)
+
+		for v in valid:
+			# curr coords distance value
+			curr_coord_val = grid[v[0]][v[1]][1]
+			
+
+			if curr_coord_val == None or (grid[curr[0]][curr[1]][1] + 1 < curr_coord_val):
+				# update curr coords value and parent
+				grid[v[0]][v[1]][1] = grid[curr[0]][curr[1]][1] + 1
+				grid[v[0]][v[1]][2] = curr
+
+				# add the coords to queue
+				queue.put(v)			
+
+	return grid
+
+
+def get_shortest_path(start, end, grid):
+	'''
+		Arguments:
+			start : tuple coordinate for starting point
+			end : tuple coordinate for end point
+			grid : 2d array
+	'''
+
+	# shortest path
+	path = []
+
+	point = end
+	parent = grid[end[0]][end[1]][2]
+
+	found = False
+	while isinstance(parent, tuple) or not found:
+		path.append(point)
+
+		if point == start:
+			found = True
+			break
+
+		point = parent
+		parent = grid[point[0]][point[1]][2]
+
+	if found == True:
+		# print out the nice path
+		print_grid(grid, path)
+		print(f'1. Shortest path \n\t{len(path)} steps')
+		print(f'2. Path taken \n\t{path[::-1]}')	
+
+	else:
+		exit('Unable to reach delivery point')
+
+##########################################################################################################
+
+# CHANGE PARAMETERS HERE
+size = 10
+start = (0,0)
+end = (9,9)
+blocks = [(7,9),(7,8),(7,7),(8,7)]
+
+# CONSTANTS
+direction = {
+		'S': (0,1), 'N': (0,-1), 'E': (-1,0), 'W': (1,0),
+		'NE': (-1,-1), 'NW': (1,-1), 'SE': (-1,1), 'SW': (1,1)
+		}
+
+
+# START OF PROGRAM
+grid = preset(size, start, end, blocks)
+
+print('STARTING GRID')
+print_grid(grid, [])
+solve(start, end, grid)
+print()
+
+# bottom up approach to get the shortest path
+print('SOLVED PATH')
+get_shortest_path(start, end, grid)
